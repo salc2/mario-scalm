@@ -7,7 +7,7 @@ import scala.math.max
 
 object Main extends App {
 
-  def main(args: Array[String]): Unit = Scalm.start(this, document.body)
+  def main(args: Array[String]): Unit = Scalm.start(this, document.querySelector("#mario"))
 
   sealed trait Direction
   case object Left extends Direction
@@ -24,7 +24,7 @@ object Main extends App {
   case class Keys(x: Int, y: Int) extends Msg
 
   def gravity(mario: Model): Model =
-    mario.copy(vy = if (mario.y > 0) mario.vy - 0.4 else 0)
+    mario.copy(vy = if (mario.y > 0) mario.vy - 0.25 else 0)
 
   def physics(mario: Model): Model =
     mario.copy(x = mario.x + mario.vx, y = max(0.0, mario.y + 3 * mario.vy))
@@ -68,13 +68,12 @@ object Main extends App {
     }
 
     val dir = model.dir.toString.toLowerCase
-    val transform = s"transform: matrix(1, 0, 0, 1, ${277 + model.x}, ${250.5 - model.y})"
+    val transform = s"transform: matrix(1, 0, 0, 1, ${277 + model.x}, ${498.5 - model.y})"
     val css =
       s"padding: 0px; margin: 0px; display: block; width: 35px; height: 35px; position: absolute; opacity: 1; $transform; background-color: transparent;"
 
     div()(
-      img(style(css), src(s"/images/$verb/$dir.gif")),
-      text(model.toString)
+      img(style(css), src(s"/resources/mario/$verb/$dir.gif"))
     )
   }
 
