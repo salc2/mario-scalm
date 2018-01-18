@@ -3,7 +3,7 @@ import scalm.Html._
 import scalm._
 import Html._
 
-import scala.math.max
+import scala.math._
 
 object Main extends App {
 
@@ -26,6 +26,7 @@ object Main extends App {
   case object ArrowLeft extends Input
   case object ArrowUp extends Input
   case object ArrowRight extends Input
+  case class OtherKey(code: Int) extends Input
 
   def gravity(mario: Model): Model =
     mario.copy(vy = if (mario.y > 0) mario.vy - 0.25 else 0)
@@ -48,14 +49,24 @@ object Main extends App {
 
   def step(input: Input, model: Model): Model = {
     val m = gravity(model)
-    val m1 = jump(input)(m)
-    val m2 = walk(input)(m1)
-    physics(m2)
+    val m1 = applyFriction(m)
+    val m2 = jump(input)(m1)
+    val m3 = walk(input)(m2)
+    physics(m3)
+  }
+
+  def applyFriction(model: Model): Model = {
+    if(model.y > 0) model
+    else if (model.vx == 0.0) model
+    else if (abs(model.vx) <= 0.01) model.copy(vx = 0.0)
+    else if (model.vx > 0.0) model.copy(vx = model.vx - 0.01)
+    else model.copy(vx = model.vx + 0.01)
   }
 
   def step(model: Model): Model = {
     val m = gravity(model)
-    physics(m)
+    val m1 = applyFriction(m)
+    physics(m1)
   }
 
   def update(msg: Msg, model: Model): (Model, Cmd[Msg]) =
@@ -66,9 +77,10 @@ object Main extends App {
 
   def subscriptions(model: Model): Sub[Msg] = {
     val keySub = Subscription.keyPressSubscriber.map {
-      case 37 => ArrowLeft
-      case 38 => ArrowUp
-      case 39 => ArrowRight
+      case 37   => ArrowLeft
+      case 38   => ArrowUp
+      case 39   => ArrowRight
+      case code => OtherKey(code)
     }
     val fpsSub = Subscription.requestAnimationFrameSub.map(_ => PassageOfTime)
     Sub.Combine(keySub, fpsSub)
@@ -84,7 +96,7 @@ object Main extends App {
 
     val dir = model.dir.toString.toLowerCase
     val transform =
-      s"transform: matrix(1, 0, 0, 1, ${277 + model.x}, ${498.5 - model.y})"
+      s"transform: matrix(1, 0, 0, 1, ${277 + model.x}, ${489.5 - model.y})"
     val css =
       s"padding: 0px; margin: 0px; display: block; width: 35px; height: 35px; position: absolute; opacity: 1; $transform; background-color: transparent;"
 

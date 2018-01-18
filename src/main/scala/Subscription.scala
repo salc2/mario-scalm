@@ -19,7 +19,7 @@ object Subscription {
   )
 
   val keyPressSubscriber:Sub[Int] = ofTotalObservable[Int](
-    "keypress", { observer =>
+    "keyPress", { observer =>
       dom.window.onkeypress = (keyEvent: KeyboardEvent) => {
         observer.onNext(keyEvent.keyCode)
       }
