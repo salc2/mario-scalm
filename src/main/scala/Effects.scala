@@ -8,7 +8,7 @@ import scalm.Sub.ofTotalObservable
 
 object Effects {
 
-  val requestAnimationFrameSub:Sub[Double] = ofTotalObservable[Double](
+  val requestAnimationFrameSub: Sub[Double] = ofTotalObservable[Double](
     "requestAnimation", { observer =>
       var handle = 0
       def loop(time: Double): Unit = {
@@ -21,55 +21,40 @@ object Effects {
     }
   )
 
-  def keyPressSub[M](keyCode: Int, msg: M):Sub[M] = ofTotalObservable[M](
+  def keyPressSub[M](keyCode: Int, msg: M): Sub[M] = ofTotalObservable[M](
     s"keyDown$keyCode", { observer =>
       dom.window.addEventListener("keydown", (keyEvent: KeyboardEvent) => {
-        if(keyEvent.keyCode == keyCode) observer.onNext(msg)
+        if (keyEvent.keyCode == keyCode) observer.onNext(msg)
       })
-      () => ()
+      () =>
+        ()
     }
   )
 
-  def keyReleaseSub[M](keyCode: Int, msg: M):Sub[M] = ofTotalObservable[M](
+  def keyReleaseSub[M](keyCode: Int, msg: M): Sub[M] = ofTotalObservable[M](
     s"keyUp$keyCode", { observer =>
       dom.window.addEventListener("keyup", (keyEvent: KeyboardEvent) => {
-        if(keyEvent.keyCode == keyCode) observer.onNext(msg)
+        if (keyEvent.keyCode == keyCode) observer.onNext(msg)
       })
-      () => ()
-    }
-  )
-
-  def touchStartSub:Sub[(Double,Double)] = ofTotalObservable[(Double,Double)](
-    s"touchStart", { observer =>
-      dom.window.addEventListener("touchstart", (touchEvent: TouchEvent) => {
-        observer.onNext( (touchEvent.touches.item(0).clientX,touchEvent.touches.item(0).clientY))
-      })
-      () => ()
-    }
-  )
-
-  def touchEndSub:Sub[(Double,Double)] = ofTotalObservable[(Double,Double)](
-    s"touchEnd", { observer =>
-      dom.window.addEventListener("touchend", (touchEvent: TouchEvent) => {
-        observer.onNext( (touchEvent.changedTouches.item(0).clientX,touchEvent.changedTouches.item(0).clientY))
-      })
-      () => ()
+      () =>
+        ()
     }
   )
 
   object Cmd {
-    def playSound[Msg](url: String, msgBack: Msg): Cmd[Msg] = Task
-      .RunObservable[Unit, Msg] { _ =>
-    {
-      val audio =
-        document.createElement("audio").asInstanceOf[HTMLAudioElement]
-      audio.src = url
-      audio.onloadeddata = (_: Event) => audio.play()
-      () =>
-        ()
-    }
-    }
-      .attempt(_ => msgBack)
+    def playSound[Msg](url: String, msgBack: Msg): Cmd[Msg] =
+      Task
+        .RunObservable[Unit, Msg] { _ =>
+          {
+            val audio =
+              document.createElement("audio").asInstanceOf[HTMLAudioElement]
+            audio.src = url
+            audio.onloadeddata = (_: Event) => audio.play()
+            () =>
+              ()
+          }
+        }
+        .attempt(_ => msgBack)
   }
 
 }

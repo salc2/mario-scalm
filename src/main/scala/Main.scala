@@ -2,10 +2,8 @@ package mario
 
 import org.scalajs.dom.{document, window}
 import scalm.Html._
-import scalm.{Task, _}
-import org.scalajs.dom.raw.HTMLAudioElement
+import scalm._
 import scala.math._
-import org.scalajs.dom.raw.Event
 import Html._
 
 object Main extends App {
@@ -89,15 +87,10 @@ object Main extends App {
       .combine(keyRightReleaseSub)
   }
 
-  def getRelativePosition(model: Model, screenX: Double, screenY: Double): (Double, Double) ={
-    val posX = (screenX - 85)/2 + model.x
-    val posY = (screenY - 85) - model.y
-    (posX, posY)
-  }
-
   def view(model: Model): Html[Msg] = {
 
-    val (posX, posY) = getRelativePosition(model,window.innerWidth, window.innerHeight)
+    val posX = (window.innerWidth - 85) / 2 + model.x
+    val posY = (window.innerHeight - 85) - model.y
 
     val verb = (model.y > 0, model.vx != 0) match {
       case (true, _) => "jump"
