@@ -17,11 +17,7 @@ object Main extends App {
   case object Left extends Direction
   case object Right extends Direction
 
-  case class Mario(x: Double,
-                   y: Double,
-                   vx: Double,
-                   vy: Double,
-                   dir: Direction)
+  case class Mario(x: Double, y: Double, vx: Double, vy: Double, dir: Direction)
 
   type Model = Mario
 
@@ -29,9 +25,11 @@ object Main extends App {
 
   sealed trait Msg
   case object PassageOfTime extends Msg
-  case class ArrowLeft(pressed: Boolean) extends Msg
-  case object ArrowUp extends Msg
-  case class ArrowRight(pressed: Boolean) extends Msg
+  case object ArrowLeftPressed extends Msg
+  case object ArrowRightPressed extends Msg
+  case object ArrowLeftReleased extends Msg
+  case object ArrowRightReleased extends Msg
+  case object ArrowUpPressed extends Msg
   case object Void extends Msg
 
   val gravity = 0.25
@@ -48,28 +46,27 @@ object Main extends App {
 
   val jump: Model => Model = _.copy(vy = 6.0)
 
-  val applyPhysics
-    : Model => Model = applyGravity compose applyMotion
+  val applyPhysics: Model => Model = applyGravity compose applyMotion
 
   def update(msg: Msg, model: Model): (Model, Cmd[Msg]) =
     msg match {
-      case ArrowUp if model.y == 0.0 =>
+      case ArrowUpPressed if model.y == 0.0 =>
         val newModel = (jump andThen applyPhysics)(model)
-         (newModel, Effects.Cmd.playSound("resources/jump-c-07.mp3", Void))
+        (newModel, Effects.Cmd.playSound("resources/jump-c-07.mp3", Void))
 
-      case ArrowLeft(true) =>
+      case ArrowLeftPressed =>
         val newModel = (walkLeft andThen applyPhysics)(model)
-        (newModel, Cmd.Empty )
+        (newModel, Cmd.Empty)
 
-      case ArrowRight(true) =>
+      case ArrowRightPressed =>
         val newModel = (walkRight andThen applyPhysics)(model)
         (newModel, Cmd.Empty)
 
-      case ArrowLeft(false) if model.dir == Left =>
+      case ArrowLeftReleased if model.dir == Left =>
         val newModel = model.copy(vx = 0.0)
         (newModel, Cmd.Empty)
 
-      case ArrowRight(false) if model.dir == Right =>
+      case ArrowRightReleased if model.dir == Right =>
         val newModel = model.copy(vx = 0.0)
         (newModel, Cmd.Empty)
 
@@ -78,11 +75,11 @@ object Main extends App {
     }
 
   def subscriptions(model: Model): Sub[Msg] = {
-    val keyLeftPressSub = Effects.keyPressSub(37, ArrowLeft(true))
-    val keyRightPressSub = Effects.keyPressSub(39, ArrowRight(true))
-    val keyLeftReleaseSub = Effects.keyReleaseSub(37, ArrowLeft(false))
-    val keyRightReleaseSub = Effects.keyReleaseSub(39, ArrowRight(false))
-    val keyUpSub = Effects.keyPressSub(38, ArrowUp)
+    val keyLeftPressSub = Effects.keyPressSub(37, ArrowLeftPressed)
+    val keyRightPressSub = Effects.keyPressSub(39, ArrowRightPressed)
+    val keyLeftReleaseSub = Effects.keyReleaseSub(37, ArrowLeftReleased)
+    val keyRightReleaseSub = Effects.keyReleaseSub(39, ArrowRightReleased)
+    val keyUpSub = Effects.keyPressSub(38, ArrowUpPressed)
     val fpsSub = Effects.requestAnimationFrameSub.map(_ => PassageOfTime)
 
     Sub
