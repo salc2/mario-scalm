@@ -1,6 +1,6 @@
 package mario
 
-import org.scalajs.dom.document
+import org.scalajs.dom.{document, window}
 import scalm.Html._
 import scalm.{Task, _}
 import org.scalajs.dom.raw.HTMLAudioElement
@@ -100,7 +100,7 @@ object Main extends App {
 
     val dir = model.dir.toString.toLowerCase
     val transform =
-      s"transform: matrix(1, 0, 0, 1, ${277 + model.x}, ${489.5 - model.y})"
+      s"transform: matrix(1, 0, 0, 1, ${100 + model.x}, ${(window.innerHeight-85) - model.y})"
     val css =
       s"padding: 0px; margin: 0px; display: block; width: 35px; height: 35px; position: absolute; opacity: 1; $transform; background-color: transparent;"
 
