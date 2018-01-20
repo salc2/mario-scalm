@@ -21,12 +21,11 @@ object Main extends App {
                    y: Double,
                    vx: Double,
                    vy: Double,
-                   dir: Direction,
-                   friction: Double)
+                   dir: Direction)
 
   type Model = Mario
 
-  def init: (Model, Cmd[Msg]) = (Mario(0, 0, 0, 0, Right, 0), Cmd.Empty)
+  def init: (Model, Cmd[Msg]) = (Mario(0, 0, 0, 0, Right), Cmd.Empty)
 
   sealed trait Msg
   case object PassageOfTime extends Msg
@@ -49,15 +48,8 @@ object Main extends App {
 
   val jump: Model => Model = _.copy(vy = 6.0)
 
-  val applyFriction: Mario => Mario = (model: Model) =>
-    if (model.y > 0) model
-    else if (model.vx == 0.0) model
-    else if (abs(model.vx) <= model.friction) model.copy(vx = 0.0)
-    else if (model.vx > 0.0) model.copy(vx = model.vx - model.friction)
-    else model.copy(vx = model.vx + model.friction)
-
   val applyPhysics
-    : Model => Model = applyGravity compose applyMotion compose applyFriction
+    : Model => Model = applyGravity compose applyMotion
 
   def update(msg: Msg, model: Model): (Model, Cmd[Msg]) =
     msg match {
@@ -66,19 +58,19 @@ object Main extends App {
          (newModel, Effects.Cmd.playSound("resources/jump-c-07.mp3", Void))
 
       case ArrowLeft(true) =>
-        val newModel = (walkLeft andThen applyPhysics)(model.copy(friction = 0))
+        val newModel = (walkLeft andThen applyPhysics)(model)
         (newModel, Cmd.Empty )
 
       case ArrowRight(true) =>
-        val newModel = (walkRight andThen applyPhysics)(model.copy(friction = 0))
+        val newModel = (walkRight andThen applyPhysics)(model)
         (newModel, Cmd.Empty)
 
       case ArrowLeft(false) if model.dir == Left =>
-        val newModel = model.copy(friction = 0.025)
+        val newModel = model.copy(vx = 0.0)
         (newModel, Cmd.Empty)
 
       case ArrowRight(false) if model.dir == Right =>
-        val newModel = model.copy(friction = 0.025)
+        val newModel = model.copy(vx = 0.0)
         (newModel, Cmd.Empty)
 
       case PassageOfTime => (applyPhysics(model), Cmd.Empty)
