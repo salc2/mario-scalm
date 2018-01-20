@@ -17,20 +17,24 @@ object Main extends App {
   case object Left extends Direction
   case object Right extends Direction
 
-  case class Mario(x: Double, y: Double, vx: Double, vy: Double, dir: Direction)
+  case class Mario(x: Double,
+                   y: Double,
+                   vx: Double,
+                   vy: Double,
+                   dir: Direction,
+                   friction: Double)
 
   type Model = Mario
 
-  def init: (Model, Cmd[Msg]) = (Mario(0, 0, 0, 0, Right), Cmd.Empty)
+  def init: (Model, Cmd[Msg]) = (Mario(0, 0, 0, 0, Right, 0), Cmd.Empty)
 
   sealed trait Msg
   case object PassageOfTime extends Msg
-  case object Void extends Msg
-  case object ArrowLeft extends Msg
+  case class ArrowLeft(pressed: Boolean) extends Msg
   case object ArrowUp extends Msg
-  case object ArrowRight extends Msg
+  case class ArrowRight(pressed: Boolean) extends Msg
+  case object Void extends Msg
 
-  val friction = 0.025
   val gravity = 0.25
 
   val applyGravity: Mario => Mario = (mario) =>
@@ -48,29 +52,53 @@ object Main extends App {
   val applyFriction: Mario => Mario = (model: Model) =>
     if (model.y > 0) model
     else if (model.vx == 0.0) model
-    else if (abs(model.vx) <= friction) model.copy(vx = 0.0)
-    else if (model.vx > 0.0) model.copy(vx = model.vx - friction)
-    else model.copy(vx = model.vx + friction)
+    else if (abs(model.vx) <= model.friction) model.copy(vx = 0.0)
+    else if (model.vx > 0.0) model.copy(vx = model.vx - model.friction)
+    else model.copy(vx = model.vx + model.friction)
 
   val applyPhysics
     : Model => Model = applyGravity compose applyMotion compose applyFriction
 
   def update(msg: Msg, model: Model): (Model, Cmd[Msg]) =
     msg match {
-      case ArrowUp       => ((jump andThen applyPhysics)(model), Effects.Cmd.playSound("resources/jump-c-07.mp3",Void))
-      case ArrowLeft     => ((walkLeft andThen applyPhysics)(model), Cmd.Empty)
-      case ArrowRight    => ((walkRight andThen applyPhysics)(model), Cmd.Empty)
+      case ArrowUp if model.y == 0.0 =>
+        val newModel = (jump andThen applyPhysics)(model)
+         (newModel, Effects.Cmd.playSound("resources/jump-c-07.mp3", Void))
+
+      case ArrowLeft(true) =>
+        val newModel = (walkLeft andThen applyPhysics)(model.copy(friction = 0))
+        (newModel, Cmd.Empty )
+
+      case ArrowRight(true) =>
+        val newModel = (walkRight andThen applyPhysics)(model.copy(friction = 0))
+        (newModel, Cmd.Empty)
+
+      case ArrowLeft(false) if model.dir == Left =>
+        val newModel = model.copy(friction = 0.025)
+        (newModel, Cmd.Empty)
+
+      case ArrowRight(false) if model.dir == Right =>
+        val newModel = model.copy(friction = 0.025)
+        (newModel, Cmd.Empty)
+
       case PassageOfTime => (applyPhysics(model), Cmd.Empty)
-      case Void          => (model, Cmd.Empty)
+      case _             => (model, Cmd.Empty)
     }
 
   def subscriptions(model: Model): Sub[Msg] = {
-    val keyLeftSub = Effects.keyPressSub(37, ArrowLeft)
+    val keyLeftPressSub = Effects.keyPressSub(37, ArrowLeft(true))
+    val keyRightPressSub = Effects.keyPressSub(39, ArrowRight(true))
+    val keyLeftReleaseSub = Effects.keyReleaseSub(37, ArrowLeft(false))
+    val keyRightReleaseSub = Effects.keyReleaseSub(39, ArrowRight(false))
     val keyUpSub = Effects.keyPressSub(38, ArrowUp)
-    val keyRightSub = Effects.keyPressSub(39, ArrowRight)
     val fpsSub = Effects.requestAnimationFrameSub.map(_ => PassageOfTime)
 
-    Sub.Combine(fpsSub, keyLeftSub).combine(keyUpSub).combine(keyRightSub)
+    Sub
+      .Combine(fpsSub, keyUpSub)
+      .combine(keyLeftPressSub)
+      .combine(keyRightPressSub)
+      .combine(keyLeftReleaseSub)
+      .combine(keyRightReleaseSub)
   }
 
   def view(model: Model): Html[Msg] = {
