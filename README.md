@@ -9,3 +9,4 @@
 sbt fastOptJS::webpack
 ```
 
+[Demo live](https://salc2.github.io/mario-scalm)
