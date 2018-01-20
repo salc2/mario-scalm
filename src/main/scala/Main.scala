@@ -33,9 +33,6 @@ object Main extends App {
   case object Void extends Msg
 
   val gravity = 0.25
-  val partialPosX = 100
-  val partialPosY = window.innerHeight-85
-
   val applyGravity: Mario => Mario = (mario) =>
     mario.copy(vy = if (mario.y > 0) mario.vy - gravity else 0)
 
@@ -84,35 +81,23 @@ object Main extends App {
     val keyUpSub = Effects.keyPressSub(38, ArrowUpPressed)
     val fpsSub = Effects.requestAnimationFrameSub.map(_ => PassageOfTime)
 
-
-    val touchStartSub = Effects.touchStartSub.map{
-      case (x,y) => (x > model.x + partialPosX, y < partialPosY - model.y)
-    }.map{
-      case (true, false) => ArrowRightPressed
-      case (false, false) => ArrowLeftPressed
-      case (_, true) => ArrowUpPressed
-      case _ => Void
-    }
-
-    val touchEndSub = Effects.touchEndSub.map{
-      case (x,y) => (x > model.x + partialPosX, y < partialPosY - model.y)
-    }.map{
-      case (true, false) => ArrowRightReleased
-      case (false,false) => ArrowLeftReleased
-      case _ => Void
-    }
-
     Sub
       .Combine(fpsSub, keyUpSub)
       .combine(keyLeftPressSub)
       .combine(keyRightPressSub)
       .combine(keyLeftReleaseSub)
       .combine(keyRightReleaseSub)
-      .combine(touchStartSub)
-      .combine(touchEndSub)
+  }
+
+  def getRelativePosition(model: Model, screenX: Double, screenY: Double): (Double, Double) ={
+    val posX = (screenX - 85)/2 + model.x
+    val posY = (screenY - 85) - model.y
+    (posX, posY)
   }
 
   def view(model: Model): Html[Msg] = {
+
+    val (posX, posY) = getRelativePosition(model,window.innerWidth, window.innerHeight)
 
     val verb = (model.y > 0, model.vx != 0) match {
       case (true, _) => "jump"
@@ -122,13 +107,12 @@ object Main extends App {
 
     val dir = model.dir.toString.toLowerCase
     val transform =
-      s"transform: matrix(1, 0, 0, 1, ${partialPosX + model.x}, ${partialPosY - model.y})"
+      s"transform: matrix(1, 0, 0, 1, $posX, $posY)"
     val css =
       s"padding: 0px; margin: 0px; display: block; width: 35px; height: 35px; position: absolute; opacity: 1; $transform; background-color: transparent;"
 
     div()(
-      img(style(css), src(s"/resources/mario/$verb/$dir.gif"))
+      img(style(css), src(s"resources/mario/$verb/$dir.gif"))
     )
   }
-
 }
