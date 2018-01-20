@@ -1,3 +1,5 @@
+package mario
+
 import scalm.Html.tag
 import scalm.{Attr, Html, Prop}
 

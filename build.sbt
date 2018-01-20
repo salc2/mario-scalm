@@ -10,5 +10,4 @@ lazy val root = (project in file("."))
     name := "untitled",
     scalaJSUseMainModuleInitializer := true
   )
-
 lazy val scalm = RootProject(uri("git://github.com/julienrf/scalm.git"))

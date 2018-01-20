@@ -1,17 +1,14 @@
+package mario
+
 import org.scalajs.dom.document
 import scalm.Html._
 import scalm.{Task, _}
-import scalm.Task.{Cancelable, Observer}
 import org.scalajs.dom.raw.HTMLAudioElement
 import scala.math._
 import org.scalajs.dom.raw.Event
 import Html._
 
 object Main extends App {
-
-  val audio = document.createElement("audio").asInstanceOf[HTMLAudioElement]
-  audio.src = ""
-  audio.play()
 
   def main(args: Array[String]): Unit =
     Scalm.start(this, document.querySelector("#mario"))
@@ -28,86 +25,53 @@ object Main extends App {
 
   sealed trait Msg
   case object PassageOfTime extends Msg
-  trait Input extends Msg
-  case object ArrowLeft extends Input
-  case object ArrowUp extends Input
-  case object ArrowRight extends Input
-  case class OtherKey(code: Int) extends Input
-
-  val gravity = 0.25
-  def applyGravity(mario: Model): Model =
-    mario.copy(vy = if (mario.y > 0) mario.vy - gravity else 0)
-
-  def physics(mario: Model): Model =
-    mario.copy(x = mario.x + mario.vx, y = max(0.0, mario.y + 3 * mario.vy))
-
-  def walk(input: Input)(mario: Model): Model =
-    input match {
-      case ArrowLeft  => mario.copy(vx = -1.5, dir = Left)
-      case ArrowRight => mario.copy(vx = 1.5, dir = Right)
-      case _          => mario
-    }
-
-  def jump(input: Input)(mario: Model): Model =
-    input match {
-      case ArrowUp if mario.vy == 0 => mario.copy(vy = 6.0)
-      case _                        => mario
-    }
-
-  def step(input: Input, model: Model): Model = {
-    val m = applyGravity(model)
-    val m1 = applyFriction(m)
-    val m2 = jump(input)(m1)
-    val m3 = walk(input)(m2)
-    physics(m3)
-  }
+  case object Void extends Msg
+  case object ArrowLeft extends Msg
+  case object ArrowUp extends Msg
+  case object ArrowRight extends Msg
 
   val friction = 0.025
-  def applyFriction(model: Model): Model = {
+  val gravity = 0.25
+
+  val applyGravity: Mario => Mario = (mario) =>
+    mario.copy(vy = if (mario.y > 0) mario.vy - gravity else 0)
+
+  val applyMotion: Mario => Mario = (mario: Model) =>
+    mario.copy(x = mario.x + mario.vx, y = max(0.0, mario.y + 3 * mario.vy))
+
+  val walkLeft: Model => Model = _.copy(vx = -1.5, dir = Left)
+
+  val walkRight: Model => Model = _.copy(vx = 1.5, dir = Right)
+
+  val jump: Model => Model = _.copy(vy = 6.0)
+
+  val applyFriction: Mario => Mario = (model: Model) =>
     if (model.y > 0) model
     else if (model.vx == 0.0) model
     else if (abs(model.vx) <= friction) model.copy(vx = 0.0)
     else if (model.vx > 0.0) model.copy(vx = model.vx - friction)
     else model.copy(vx = model.vx + friction)
-  }
 
-  def step(model: Model): Model = {
-    val m = applyGravity(model)
-    val m1 = applyFriction(m)
-    physics(m1)
-  }
+  val applyPhysics
+    : Model => Model = applyGravity compose applyMotion compose applyFriction
 
   def update(msg: Msg, model: Model): (Model, Cmd[Msg]) =
     msg match {
-      case up @ ArrowUp  => (step(up, model), playSoundJump)
-      case input: Input  => (step(input, model), Cmd.Empty)
-      case PassageOfTime => (step(model), Cmd.Empty)
+      case ArrowUp       => ((jump andThen applyPhysics)(model), Effects.Cmd.playSound("resources/jump-c-07.mp3",Void))
+      case ArrowLeft     => ((walkLeft andThen applyPhysics)(model), Cmd.Empty)
+      case ArrowRight    => ((walkRight andThen applyPhysics)(model), Cmd.Empty)
+      case PassageOfTime => (applyPhysics(model), Cmd.Empty)
+      case Void          => (model, Cmd.Empty)
     }
 
   def subscriptions(model: Model): Sub[Msg] = {
-    val keySub = Subscription.keyPressSubscriber.map {
-      case 37   => ArrowLeft
-      case 38   => ArrowUp
-      case 39   => ArrowRight
-      case code => OtherKey(code)
-    }
-    val fpsSub = Subscription.requestAnimationFrameSub.map(_ => PassageOfTime)
-    Sub.Combine(keySub, fpsSub)
-  }
+    val keyLeftSub = Effects.keyPressSub(37, ArrowLeft)
+    val keyUpSub = Effects.keyPressSub(38, ArrowUp)
+    val keyRightSub = Effects.keyPressSub(39, ArrowRight)
+    val fpsSub = Effects.requestAnimationFrameSub.map(_ => PassageOfTime)
 
-  val playSoundJump: Cmd[Msg] =
-    Task
-      .RunObservable[Unit, Msg] { _ =>
-        {
-          val audio =
-            document.createElement("audio").asInstanceOf[HTMLAudioElement]
-          audio.src = "resources/jump-c-07.mp3"
-          audio.onloadeddata = (_: Event) => audio.play()
-          () =>
-            ()
-        }
-      }
-      .attempt(_ => OtherKey(0))
+    Sub.Combine(fpsSub, keyLeftSub).combine(keyUpSub).combine(keyRightSub)
+  }
 
   def view(model: Model): Html[Msg] = {
 
